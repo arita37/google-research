@@ -1,5 +1,5 @@
 # coding=utf-8
-# Copyright 2019 The Google Research Authors.
+# Copyright 2020 The Google Research Authors.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -21,15 +21,17 @@ from __future__ import division
 from __future__ import print_function
 
 import gin
-import tensorflow as tf
+import tensorflow.compat.v1 as tf
+from tensorflow.contrib import layers as contrib_layers
+from tensorflow.contrib import slim as contrib_slim
 
-slim = tf.contrib.slim
+slim = contrib_slim
 
 # Register normalization functions as configurables.
-gin.config.external_configurable(tf.contrib.layers.layer_norm,
-                                 module='tf.contrib.layers')
-gin.config.external_configurable(tf.contrib.layers.batch_norm,
-                                 module='tf.contrib.layers')
+gin.config.external_configurable(
+    contrib_layers.layer_norm, module='tf.contrib.layers')
+gin.config.external_configurable(
+    contrib_layers.batch_norm, module='tf.contrib.layers')
 
 
 @gin.configurable

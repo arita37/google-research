@@ -1,5 +1,5 @@
 # coding=utf-8
-# Copyright 2019 The Google Research Authors.
+# Copyright 2020 The Google Research Authors.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -24,8 +24,11 @@ import contextlib
 
 import numpy as np
 
-import tensorflow as tf
+import tensorflow.compat.v1 as tf
+import tensorflow_probability as tfp
+
 from cnn_quantization.tf_cnn_benchmarks import mlperf
+from tensorflow.contrib import layers as contrib_layers
 from tensorflow.contrib.quantize.python import common
 from tensorflow.python.layers import convolutional as conv_layers
 from tensorflow.python.layers import core as core_layers
@@ -348,22 +351,22 @@ class ConvNetBuilder(object):
 
       if per_channel:
         if input_dim >= 2:
-          batch_min = tf.contrib.distributions.percentile(
+          batch_min = tfp.stats.percentile(
               inputs, q=quantile, axis=reduce_dims, name='BatchMin')
         else:
           batch_min = inputs
       else:
-        batch_min = tf.contrib.distributions.percentile(
+        batch_min = tfp.stats.percentile(
             inputs, q=quantile, name='BatchMin')
 
       if per_channel:
         if input_dim >= 2:
-          batch_max = tf.contrib.distributions.percentile(
+          batch_max = tfp.stats.percentile(
               inputs, q=100 - quantile, axis=reduce_dims, name='BatchMax')
         else:
           batch_max = inputs
       else:
-        batch_max = tf.contrib.distributions.percentile(
+        batch_max = tfp.stats.percentile(
             inputs, q=100 - quantile, name='BatchMax')
 
       if narrow_range:
@@ -813,7 +816,7 @@ class ConvNetBuilder(object):
     center = True
     with tf.variable_scope(name) as scope:
       if self.use_tf_layers:
-        bn = tf.contrib.layers.batch_norm(
+        bn = contrib_layers.batch_norm(
             input_layer,
             decay=decay,
             scale=scale,

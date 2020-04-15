@@ -1,6 +1,6 @@
 # A General and Adaptive Robust Loss Function
 
-This directory contains reference code for the paper
+This directory contains Tensorflow 2 reference code for the paper
 [A General and Adaptive Robust Loss Function](https://arxiv.org/abs/1701.03077),
 Jonathan T. Barron CVPR, 2019
 
@@ -11,6 +11,9 @@ implements the "adaptive" form of the loss, which tries to adapt the
 hyperparameters automatically and also includes support for imposing losses in
 different image representations. The probability distribution underneath the
 adaptive loss is implemented in `distribution.py`.
+
+The VAE experiment from the paper can be reproduced by running `vae.py`. See
+`example.ipynb` for a simple toy example of how this loss can be used.
 
 This code repository is shared with all of Google Research, so it's not very
 useful for reporting or tracking bugs. If you have any issues using this code,

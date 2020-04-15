@@ -1,5 +1,5 @@
 # coding=utf-8
-# Copyright 2019 The Google Research Authors.
+# Copyright 2020 The Google Research Authors.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -13,11 +13,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+# Lint as: python3
 """Tests for Evaluate library."""
-
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import print_function
 
 import string
 
@@ -25,7 +22,7 @@ import numpy as np
 import numpy.testing as numpy_testing
 import pandas as pd
 from six.moves import range
-import tensorflow as tf
+import tensorflow.compat.v1 as tf
 
 from correct_batch_effects_wdn import evaluate
 from correct_batch_effects_wdn import metadata

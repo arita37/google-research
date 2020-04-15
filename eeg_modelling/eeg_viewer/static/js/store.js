@@ -1,4 +1,4 @@
-// Copyright 2019 The Google Research Authors.
+// Copyright 2020 The Google Research Authors.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -1292,7 +1292,7 @@ class Store {
    * @return {?PartialStoreData} store data with changed properties.
    */
   handleNavBarRequest(data) {
-    if (!goog.isNumber(data.time)) {
+    if (typeof data.time !== 'number') {
       return null;
     }
     return {

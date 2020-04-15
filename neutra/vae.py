@@ -1,5 +1,5 @@
 # coding=utf-8
-# Copyright 2019 The Google Research Authors.
+# Copyright 2020 The Google Research Authors.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -31,7 +31,7 @@ import gin
 import numpy as np
 from six.moves import range
 from six.moves import zip
-import tensorflow as tf
+import tensorflow.compat.v1 as tf
 import tensorflow_probability as tfp
 from typing import Any, Dict, List, Optional, Tuple
 
@@ -721,7 +721,7 @@ def DenseRecognition(images, encoder, z=None, sigma_activation="exp"
   if z is None:
     z = [dist.sample()]
   tf.logging.info("bijector z shape: %s", z[0].shape)
-  return z, [dist.log_prob(z[0])], [bijector]
+  return z, [dist.log_prob(z[0])], [bijector]  # pytype: disable=bad-return-type
 
 
 @gin.configurable("dense_recognition_affine")
@@ -732,11 +732,10 @@ def DenseRecognitionAffine(images, encoder, z=None,
   encoding = encoder(images)
 
   mu = encoding[:, :z_dims]
-  tril_raw = tfd.fill_triangular(encoding[:, z_dims:])
+  tril_raw = tfp.math.fill_triangular(encoding[:, z_dims:])
   sigma = tf.nn.softplus(tf.matrix_diag_part(tril_raw))
-  tril = (1.0 - tf.matrix_diag(tf.ones_like(sigma))) * tril_raw
-  bijector = tfb.Affine(shift=mu, scale_diag=sigma,
-                        scale_tril=tril)
+  tril = tf.linalg.set_diag(tril_raw, sigma)
+  bijector = tfb.Affine(shift=mu, scale_tril=tril)
 
   mvn = tfd.MultivariateNormalDiag(
       loc=tf.zeros_like(mu), scale_diag=tf.ones_like(sigma))
@@ -744,7 +743,7 @@ def DenseRecognitionAffine(images, encoder, z=None,
 
   if z is None:
     z = [dist.sample()]
-  return z, [dist.log_prob(z[0])], [bijector]
+  return z, [dist.log_prob(z[0])], [bijector]  # pytype: disable=bad-return-type
 
 
 @gin.configurable("dense_recognition_affine_lr")
@@ -769,7 +768,7 @@ def DenseRecognitionAffineLR(images, encoder, z=None,
 
   if z is None:
     z = [dist.sample()]
-  return z, [dist.log_prob(z[0])], [bijector]
+  return z, [dist.log_prob(z[0])], [bijector]  # pytype: disable=bad-return-type
 
 
 @gin.configurable("dense_recognition_rnvp")
@@ -841,7 +840,7 @@ def DenseRecognitionRNVP(
   if z is None:
     z = [dist.sample()]
 
-  return z, [dist.log_prob(z[0])], [bijector]
+  return z, [dist.log_prob(z[0])], [bijector]  # pytype: disable=bad-return-type
 
 
 @gin.configurable("dense_recognition_iaf")
@@ -915,7 +914,7 @@ def DenseRecognitionIAF(
   if z is None:
     z = [dist.sample()]
 
-  return z, [dist.log_prob(z[0])], [bijector]
+  return z, [dist.log_prob(z[0])], [bijector]  # pytype: disable=bad-return-type
 
 
 class FlipImageBijector(tfb.Bijector):
@@ -1025,7 +1024,7 @@ def ConvIAF(
 
   if z is None:
     z = [dist.sample()]
-  return z, [dist.log_prob(z[0])], [bijector]
+  return z, [dist.log_prob(z[0])], [bijector]  # pytype: disable=bad-return-type
 
 
 @gin.configurable("conv_shift_scale")
@@ -1063,7 +1062,7 @@ def ConvShiftScale(
 
   if z is None:
     z = [dist.sample()]
-  return z, [dist.log_prob(z[0])], [bijector]
+  return z, [dist.log_prob(z[0])], [bijector]  # pytype: disable=bad-return-type
 
 
 @utils.MakeTFTemplate
@@ -1076,7 +1075,7 @@ def SimplePrior(z=None, batch=None,
   if z is None:
     z = [mvn.sample(batch)]
 
-  return z, [mvn.log_prob(z[0])]
+  return z, [mvn.log_prob(z[0])]  # pytype: disable=bad-return-type
 
 
 @utils.MakeTFTemplate
@@ -1088,7 +1087,7 @@ def Simple3DPrior(z=None, batch=None,
   if z is None:
     z = [mvn.sample(batch)]
 
-  return z, [mvn.log_prob(z[0])]
+  return z, [mvn.log_prob(z[0])]  # pytype: disable=bad-return-type
 
 @utils.MakeTFTemplate
 def DenseMNISTNoise(x=None, z=None, decoder=None, return_means=True):
@@ -1505,21 +1504,20 @@ class DLGM(object):
         # Not super efficient...
         loss = tf.cond(use_other_z_init, lambda: tf.identity(loss),
                        lambda: tf.identity(-outputs.elbo))
-      recog_train_op = tf.contrib.training.create_train_op(
-          loss,
-          opt,
-          summarize_gradients=True,
+      recog_train_op = utils.CreateTrainOp(
+          total_loss=loss,
+          optimizer=opt,
+          global_step=global_step,
           variables_to_train=self.RecogVars(),
           transform_grads_fn=utils.ProcessGradients)
     with tf.name_scope("gen_train"):
       gen_loss = tf.cond(global_step < self._no_gen_train_steps,
                          lambda: -outputs.elbo, lambda: -outputs.mcmc_log_p)
 
-      gen_train_op = tf.contrib.training.create_train_op(
-          gen_loss,
-          opt,
-          None,
-          summarize_gradients=True,
+      gen_train_op = utils.CreateTrainOp(
+          total_loss=gen_loss,
+          optimizer=opt,
+          global_step=None,
           variables_to_train=self.GenVars(),
           transform_grads_fn=utils.ProcessGradients)
 
@@ -1713,10 +1711,11 @@ class VAE(object):
     tf.summary.image(
         "sample_means", utils.StitchImages(outputs.sample_means))
 
-    return tf.contrib.training.create_train_op(
-        -outputs.elbo,
-        opt,
-        summarize_gradients=True,
+    return utils.CreateTrainOp(
+        total_loss=-outputs.elbo,
+        optimizer=opt,
+        global_step=global_step,
+        variables_to_train=tf.trainable_variables(),
         transform_grads_fn=utils.ProcessGradients)
 
   def GetPosterior(self, images):
@@ -1799,13 +1798,17 @@ def Train(model, dataset, train_dir, master, epochs=600, polyak_averaging=0.0, w
                               TRAIN_BATCH),
       tf.train.LoggingTensorHook(utils.GetLoggingOutputs(), every_n_secs=60)
   ]
-  tf.contrib.training.train(
-      train_op,
-      logdir=train_dir,
+  with tf.train.MonitoredTrainingSession(
       master=master,
+      is_chief=True,
+      checkpoint_dir=train_dir,
       hooks=hooks,
       save_checkpoint_secs=120,
-      save_summaries_steps=60)
+      save_summaries_steps=60,
+      max_wait_secs=7200) as sess:
+
+    while not sess.should_stop():
+      sess.run(train_op)
 
 
 def Eval(model, dataset, train_dir, eval_dir, master,
@@ -1827,17 +1830,12 @@ def Eval(model, dataset, train_dir, eval_dir, master,
 
   tf.Session.reset(master)
 
-  hooks = [
-      # Just for logging.
-      tf.contrib.training.StopAfterNEvalsHook(dataset.test_size // TEST_BATCH),
-      tf.contrib.training.SummaryAtEndHook(eval_dir),
-      tf.train.LoggingTensorHook(utils.GetLoggingOutputs(), at_end=True)
-  ]
-  tf.contrib.training.evaluate_repeatedly(
+  utils.evaluate_repeatedly(
       train_dir,
+      eval_dir,
       eval_ops=eval_op,
-      hooks=hooks,
-      # LOL...
+      stop_after_n_evals=dataset.test_size // TEST_BATCH,
+      # This is widely optimistic.
       eval_interval_secs=120,
       max_number_of_evaluations=max_number_of_evaluations,
       master=master,

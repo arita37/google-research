@@ -1,5 +1,5 @@
 # coding=utf-8
-# Copyright 2019 The Google Research Authors.
+# Copyright 2020 The Google Research Authors.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -19,7 +19,6 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
 
-import functools
 import itertools
 from absl import logging
 from nltk.translate import bleu_score as nltk_bleu_score
@@ -124,7 +123,6 @@ def MaybeEmulateMultiBleu(nltk_target_fn):
     expected by NLTK's corpus_bleu and sentence_bleu functions.
   """
   fn = nltk_target_fn
-
 
   return fn
 

@@ -1,5 +1,5 @@
 # coding=utf-8
-# Copyright 2019 The Google Research Authors.
+# Copyright 2020 The Google Research Authors.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -23,11 +23,12 @@ from absl import app
 from absl import flags
 import six
 from six.moves import range
-import tensorflow as tf
+import tensorflow.compat.v1 as tf
 from deep_homography import hmg_util
 from deep_homography import models
+from tensorflow.contrib import slim as contrib_slim
 
-slim = tf.contrib.slim
+slim = contrib_slim
 
 flags.DEFINE_string('master', 'local', 'Master of the training')
 flags.DEFINE_integer('ps_tasks', 0, 'Number of paramater servers')

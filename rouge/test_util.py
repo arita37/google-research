@@ -1,5 +1,5 @@
 # coding=utf-8
-# Copyright 2019 The Google Research Authors.
+# Copyright 2020 The Google Research Authors.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -32,3 +32,10 @@ LARGE_TARGETS_FILE = os.path.join(_TESTDATA_PREFIX, "target_large.txt")
 LARGE_PREDICTIONS_FILE = os.path.join(_TESTDATA_PREFIX, "prediction_large.txt")
 
 DELIMITED_FILE = os.path.join(_TESTDATA_PREFIX, "delimited.txt")
+
+PYROUGE_DIR = os.path.join(_TESTDATA_PREFIX, "pyrouge_files")
+
+
+def get_text(fname):
+  with open(fname) as f:
+    return f.read()

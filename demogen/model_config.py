@@ -1,5 +1,5 @@
 # coding=utf-8
-# Copyright 2019 The Google Research Authors.
+# Copyright 2020 The Google Research Authors.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -34,8 +34,9 @@ from the margin distribution generalization dataset.
 import json
 import os
 
-import tensorflow as tf
+import tensorflow.compat.v1 as tf
 from demogen.models.get_model import get_model
+from tensorflow.contrib import training as contrib_training
 
 
 CKPT_NAME = 'model.ckpt-150000'
@@ -131,8 +132,8 @@ class ModelConfig(object):
     if not self.root_dir:
       raise ValueError('This model config does not have a root directory.')
     stats_path = os.path.join(self.get_model_dir_name(), stats_file_name)
-    with tf.io.gfile.Gfile(stats_path, 'r') as f:
-      return json.loads(f)[stats_name]
+    with tf.io.gfile.GFile(stats_path, 'r') as f:
+      return json.load(f)[stats_name]
 
   def training_stats(self, stats_name='Accuracy'):
     """Get the specified training statistics of the model.
@@ -229,7 +230,7 @@ class ModelConfig(object):
     Returns:
       A callable model function built according to the hyper parameters of self.
     """
-    config = tf.contrib.training.HParams(
+    config = contrib_training.HParams(
         wide=self.wide_multiplier,
         dropout=self.dropout_prob,
         batchnorm=self.batchnorm,

@@ -1,5 +1,5 @@
 # coding=utf-8
-# Copyright 2019 The Google Research Authors.
+# Copyright 2020 The Google Research Authors.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -27,12 +27,13 @@ import collections
 import numpy
 import os
 import pprint
-import tensorflow as tf
+import tensorflow.compat.v1 as tf
 
 
 from dim4.so8_supergravity_extrema.code import algebra
 from dim4.so8_supergravity_extrema.code import scalar_sector
-from dim4.so8_supergravity_extrema.code import tf_cexpm
+from m_theory_lib import tf_cexpm
+from tensorflow.contrib import opt as contrib_opt
 
 
 # Must be wrapped up in a function, since we can only call this with
@@ -44,12 +45,12 @@ def get_tf_scalar_evaluator():
       expm=tf_cexpm.cexpm,
       einsum=tf.einsum,
       eye=lambda n: tf.constant(numpy.eye(n), dtype=tf.complex128),
-      trace=tf.trace,
+      trace=tf.linalg.trace,
       concatenate=lambda ts: tf.concat(ts, 0),
       complexify=lambda a: tf.cast(a, tf.complex128),
-      re=tf.real,
-      im=tf.imag,
-      conjugate=tf.conj)
+      re=tf.math.real,
+      im=tf.math.imag,
+      conjugate=tf.math.conj)
 
 
 def S_id(v):
@@ -64,23 +65,23 @@ def get_scanner(output_path,
   graph = tf.Graph()
   with graph.as_default():
     tf_scalar_evaluator = get_tf_scalar_evaluator()
-    t_input = tf.placeholder(tf.float64, shape=[70])
+    t_input = tf.compat.v1.placeholder(tf.float64, shape=[70])
     t_v70 = tf.Variable(
         initial_value=numpy.zeros([70]), trainable=True, dtype=tf.float64)
-    op_assign_input = tf.assign(t_v70, t_input)
+    op_assign_input = tf.compat.v1.assign(t_v70, t_input)
     sinfo = tf_scalar_evaluator(tf.cast(t_v70, tf.complex128))
     t_potential = sinfo.potential
     #
     t_stationarity = sinfo.stationarity
-    op_opt = tf.contrib.opt.ScipyOptimizerInterface(
+    op_opt = contrib_opt.ScipyOptimizerInterface(
         tf.asinh(t_stationarity), options={'maxiter': maxiter})
     #
     def scanner(seed, scale=0.1, num_iterations=1):
       results = collections.defaultdict(list)
       rng = numpy.random.RandomState(seed)
       with graph.as_default():
-        with tf.Session() as sess:
-          sess.run([tf.global_variables_initializer()])
+        with tf.compat.v1.Session() as sess:
+          sess.run([tf.compat.v1.global_variables_initializer()])
           for n in range(num_iterations):
             v70 = rng.normal(scale=scale, size=[70])
             sess.run([op_assign_input], feed_dict={t_input: v70})

@@ -1,5 +1,5 @@
 # coding=utf-8
-# Copyright 2019 The Google Research Authors.
+# Copyright 2020 The Google Research Authors.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -21,10 +21,7 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
 
-import functools
 import os
-import timeit
-import traceback
 
 from absl import app
 from absl import flags
@@ -33,10 +30,13 @@ import numpy as np
 import simplejson
 from six.moves import range
 from six.moves import zip
-import tensorflow as tf
+import tensorflow.compat.v1 as tf
 
 from neutra import neutra
 from neutra import utils
+
+tf.disable_v2_behavior()
+nest = tf.nest
 
 flags.DEFINE_string("neutra_log_dir", "/tmp/neutra",
                     "Output directory for experiment artifacts.")
@@ -51,7 +51,8 @@ flags.DEFINE_boolean(
     "previous run.")
 flags.DEFINE(utils.YAMLDictParser(), "hparams", "",
              "Hyperparameters to override.")
-flags.DEFINE_string("tune_outputs_name", "tune_outputs", "Name of the tune_outputs file.")
+flags.DEFINE_string("tune_outputs_name", "tune_outputs",
+                    "Name of the tune_outputs file.")
 flags.DEFINE_string("eval_suffix", "", "Suffix for the eval outputs.")
 
 FLAGS = flags.FLAGS
@@ -64,8 +65,11 @@ def Train(exp, sess):
   if global_step == 0:
     tf.logging.info("Training")
     q_stats, secs_per_step = exp.TrainBijector(sess)
-    utils.SaveJSON(q_stats, os.path.join(log_dir, "q_stats" + FLAGS.eval_suffix))
-    utils.SaveJSON(secs_per_step, os.path.join(log_dir, "secs_per_train_step" + FLAGS.eval_suffix))
+    utils.SaveJSON(q_stats, os.path.join(log_dir,
+                                         "q_stats" + FLAGS.eval_suffix))
+    utils.SaveJSON(
+        secs_per_step,
+        os.path.join(log_dir, "secs_per_train_step" + FLAGS.eval_suffix))
 
   tf.logging.info("Tuning")
   tune_outputs = exp.Tune(
@@ -89,7 +93,8 @@ def Benchmark(exp, sess):
   }
   seconds_per_step = exp.Benchmark(sess, feed=feed)
 
-  utils.SaveJSON(seconds_per_step, os.path.join(log_dir, "secs_per_hmc_step" + FLAGS.eval_suffix))
+  utils.SaveJSON(seconds_per_step,
+                 os.path.join(log_dir, "secs_per_hmc_step" + FLAGS.eval_suffix))
 
 
 @gin.configurable("eval_mode")
@@ -116,15 +121,19 @@ def Eval(exp, sess, batch_size=256, total_batch=4096):
     else:
       return lambda x: np.mean(x, 0)
 
-  avg_type = [classify("".join(str(p) for p in path)) for path in tf.contrib.framework.nest.yield_flat_paths(results[0])]
-  flat_results = [tf.contrib.framework.nest.flatten(r) for r in results]
+  avg_type = [
+      classify("".join(map(str, path)))
+      for path, _ in nest.flatten_with_tuple_paths(results[0])
+  ]
+  flat_results = [nest.flatten(r) for r in results]
   trans_results = list(zip(*flat_results))
   trans_mean_results = [avg(r) for avg, r in zip(avg_type, trans_results)]
-  neutra_stats, p_accept = tf.contrib.framework.nest.pack_sequence_as(
-      results[0], trans_mean_results)
+  neutra_stats, p_accept = nest.pack_sequence_as(results[0], trans_mean_results)
 
-  utils.SaveJSON(neutra_stats, os.path.join(log_dir, "neutra_stats" + FLAGS.eval_suffix))
-  utils.SaveJSON(p_accept, os.path.join(log_dir, "p_accept" + FLAGS.eval_suffix))
+  utils.SaveJSON(neutra_stats,
+                 os.path.join(log_dir, "neutra_stats" + FLAGS.eval_suffix))
+  utils.SaveJSON(p_accept, os.path.join(log_dir,
+                                        "p_accept" + FLAGS.eval_suffix))
 
 
 def main(argv):
@@ -137,10 +146,9 @@ def main(argv):
       gin.parse_config(f.read())
 
   tf.gfile.MakeDirs(log_dir)
-  summary_writer = tf.contrib.summary.create_file_writer(
-      log_dir, flush_millis=10000)
+  summary_writer = tf.summary.create_file_writer(log_dir, flush_millis=10000)
   summary_writer.set_as_default()
-  with tf.contrib.summary.always_record_summaries():
+  with tf.summary.record_if(True):
     exp = neutra.NeuTraExperiment(log_dir=log_dir)
     with tf.gfile.Open(os.path.join(log_dir, "config"), "w") as f:
       f.write(gin.operative_config_str())
@@ -148,7 +156,7 @@ def main(argv):
 
     with tf.Session() as sess:
       exp.Initialize(sess)
-      tf.contrib.summary.initialize(graph=tf.get_default_graph())
+      tf.compat.v1.summary.initialize(graph=tf.get_default_graph())
 
       checkpoint = tf.train.latest_checkpoint(log_dir)
       if checkpoint:

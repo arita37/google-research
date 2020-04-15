@@ -1,3 +1,17 @@
+// Copyright 2020 The Google Research Authors.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
 #include "edf/tf_example_lib.h"
 
 #include <string>
@@ -279,9 +293,10 @@ Status IsSegmentValid(const Segment& segment) {
       sampling_rate = channel.sampling_frequency_hz();
       found_sampling_rate = true;
     } else if (channel.sampling_frequency_hz() != sampling_rate) {
-      return InvalidArgumentError(absl::StrCat(
-          "Multiple frequency values detected for channels in segment file: ",
-          segment.filename()));
+      ABSL_RAW_LOG(
+          INFO, "Skipping channel with different frequency: %s, Filename: %s",
+          channel.name().c_str(), segment.filename().c_str());
+      continue;
     }
     if (channel_names.find(channel.name()) != channel_names.end()) {
       return InvalidArgumentError(absl::StrCat(

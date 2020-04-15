@@ -1,5 +1,5 @@
 # coding=utf-8
-# Copyright 2019 The Google Research Authors.
+# Copyright 2020 The Google Research Authors.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -20,7 +20,8 @@ from __future__ import division
 from __future__ import print_function
 
 from enum import Enum
-import tensorflow as tf
+import tensorflow.compat.v1 as tf
+import tensorflow_probability as tfp
 
 
 class Mask(Enum):
@@ -113,7 +114,7 @@ class StochasticActor(tf.keras.Model):
     return mu_var + [sig_var]
 
   def dist(self, mu, sig):
-    return tf.contrib.distributions.MultivariateNormalDiag(
+    return tfp.distributions.MultivariateNormalDiag(
         loc=mu,
         scale_diag=sig)
 

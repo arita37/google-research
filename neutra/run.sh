@@ -1,4 +1,4 @@
-# Copyright 2019 The Google Research Authors.
+# Copyright 2020 The Google Research Authors.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -19,6 +19,13 @@ set -x
 virtualenv -p python3 .
 source ./bin/activate
 
+rm -rf probability
+git clone --depth 1 https://github.com/tensorflow/probability.git
+cp -R probability/discussion discussion
+
 pip install -r neutra/requirements.txt
 python -m neutra.neutra_test
 python -m neutra.vae_test
+python -m neutra.ebm.ebm_test
+
+rm -rf discussion

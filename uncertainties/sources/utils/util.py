@@ -1,5 +1,5 @@
 # coding=utf-8
-# Copyright 2019 The Google Research Authors.
+# Copyright 2020 The Google Research Authors.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -13,6 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+# Lint as: python2, python3
 """Utility functions.
 """
 
@@ -25,10 +26,10 @@ import csv
 import os
 
 from absl import flags
-import numpy as np
-import tensorflow as tf
-
 import gin.tf
+import numpy as np
+import six
+import tensorflow.compat.v1 as tf
 
 FLAGS = flags.FLAGS
 
@@ -91,7 +92,7 @@ def write_gin(output_dir):
   # Write result to disk.
   result_path = os.path.join(output_dir, "gin_config.csv")
   with tf.gfile.GFile(result_path, "w") as f:
-    writer = csv.DictWriter(f, fieldnames=output_dict.keys())
+    writer = csv.DictWriter(f, fieldnames=list(output_dict.keys()))
     writer.writeheader()
     writer.writerow(output_dict)
 
@@ -101,13 +102,14 @@ def get_gin_dict():
   result = collections.OrderedDict()
   # Gin does not allow to retrieve such a dictionary but it allows to obtain a
   # string with all active configs in human readable format.
-  for line in gin.operative_config_str().split("\n"):
+  for line in six.ensure_str(gin.operative_config_str()).split("\n"):
     # We need to filter out the auto-generated comments and make sure the line
     # contains a valid assignment.
-    if not line.startswith("#") and not line.endswith("\\") and " = " in line:
+    if not six.ensure_str(line).startswith("#") and not six.ensure_str(
+        line).endswith("\\") and " = " in line:
       # We are content with the string representations (we only want to use it
       # for analysis in colab after all).
-      key, value = line.split(" = ", 2)
-      _, key_2 = key.split(".", 2)
+      key, value = six.ensure_str(line).split(" = ", 2)
+      _, key_2 = six.ensure_str(key).split(".", 2)
       result["%s" % key_2] = value
   return result

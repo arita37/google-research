@@ -1,5 +1,5 @@
 # coding=utf-8
-# Copyright 2019 The Google Research Authors.
+# Copyright 2020 The Google Research Authors.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -13,6 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+# Lint as: python3
 """Code for training a VAE using our adaptive loss on the Celeb-A dataset.
 
 This code is a fork of TensorFlow Probability's example code at
@@ -36,6 +37,7 @@ the shell script below reproduces the results from all models discussed in that
 paper: Adaptive, Normal, and Cauchy distributions used to model RGB pixels,
 YUV DCTs, and YUV Wavelets. Running it yourself will require changing the paths
 for the output and input, unless you're sitting at barron@'s workstation.
+Though the rest of the code in this repo is TF2, this script is TF1.
 
 RUN="ipython robust_loss/vae.py -- "
 OUTPUT_DIR="--output_dir=/tmp/vae/"
@@ -64,16 +66,12 @@ ${RUN} ${OUTPUT_DIR}normal_pixel/ ${OPTIONS} ${PIXEL} ${NORMAL}
 ${RUN} ${OUTPUT_DIR}cauchy_pixel/ ${OPTIONS} ${PIXEL} ${CAUCHY}
 """
 
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import print_function
-
 import functools
 import os
 
 from absl import flags
 import numpy as np
-import tensorflow as tf
+import tensorflow.compat.v1 as tf
 from tensorflow_probability import distributions as tfd
 from robust_loss import adaptive
 
@@ -139,44 +137,78 @@ flags.DEFINE_bool(
 flags.DEFINE_string(
     "color_space",
     default="YUV",
-    help="The loss's color_space, see adaptive.image_lossfun().")
+    help="The loss's color_space, see AdaptiveImageLossFunction.")
 flags.DEFINE_string(
     "representation",
     default="CDF9/7",
-    help="The loss's image representation, see adaptive.image_lossfun().")
+    help="The loss's image representation, see AdaptiveImageLossFunction.")
 flags.DEFINE_integer(
     "wavelet_scale_base",
     default=1,
-    help="The loss's wavelet scaling, see adaptive.image_lossfun().")
+    help="The loss's wavelet scaling, see AdaptiveImageLossFunction.")
 flags.DEFINE_integer(
     "wavelet_num_levels",
     default=5,
-    help="The loss's wavelet depth, see adaptive.image_lossfun().")
+    help="The loss's wavelet depth, see AdaptiveImageLossFunction.")
 flags.DEFINE_float(
     "alpha_lo",
     default=0,
-    help="The lower bound on the loss's alpha, see adaptive.lossfun().")
+    help="The lower bound on the loss's alpha, see AdaptiveLossFunction.")
 flags.DEFINE_float(
     "alpha_hi",
     default=2,
-    help="The upper bound on the loss's alpha, see adaptive.lossfun().")
+    help="The upper bound on the loss's alpha, see AdaptiveLossFunction.")
 flags.DEFINE_float(
     "alpha_init",
     default=None,
-    help="The initial value of the loss's alpha, see adaptive.lossfun().")
+    help="The initial value of the loss's alpha, see AdaptiveLossFunction.")
 flags.DEFINE_float(
     "scale_lo",
     default=1e-8,
-    help="The lower bound on the loss's scale, see adaptive.lossfun().")
+    help="The lower bound on the loss's scale, see AdaptiveLossFunction.")
 flags.DEFINE_float(
     "scale_init",
     default=1e-2,
-    help="The initial value of the loss's scale, see adaptive.lossfun().")
+    help="The initial value of the loss's scale, see AdaptiveLossFunction.")
 flags.DEFINE_bool(
     "use_students_t",
     default=False,
     help="If true, use the negative log-likelihood of a Generalized Student's "
     "t-distribution as the loss")
+# The following flags enable experiments with closed form prior and posterior
+# variances and the BILBO objective from the paper:
+# "Closed Form Variances for Variational Auto-Encoders"
+# http://arxiv.org/abs/1912.10309
+flags.DEFINE_bool(
+    "unit_posterior",
+    default=False,
+    help="Whether or not to use constant (identity) posterior variances.")
+flags.DEFINE_float(
+    "posterior_variance",
+    default=1.0,
+    help="Posterior variance scaling factor. The posterior variance is the "
+    "identity matrix times this value. Only used when `unit_posterior=True`.")
+flags.DEFINE_bool(
+    "floating_prior",
+    default=False,
+    help="Whether or not to use a fitted Gaussian for the prior. If "
+    "floating_prior is True, then you must also specify `unit_posterior` and "
+    "`mixture_components=1`.")
+flags.DEFINE_bool(
+    "fitted_samples",
+    default=False,
+    help="Whether or not to use a fitted Gaussian for sampling rather than the "
+    "prior, regardless of `floating_prior`. This allows generative samples "
+    "from fitted distributions even when lossing with traditional priors and "
+    "posteriors. If `fitted_samples` is True, then you must also specify "
+    "`mixture_components=1`.")
+flags.DEFINE_bool(
+    "bilbo",
+    default=False,
+    help="Whether or not to use the BILBO rather than ELBO for the loss, which "
+    "is equivalent to using `unit_posterior` but has a simpler formulation. "
+    "Metrics will still be reported as ELBO. If bilbo is True, then you must "
+    "also specify `floating_prior` and its prerequisites.")
 
 FLAGS = flags.FLAGS
 
@@ -215,11 +247,13 @@ def make_encoder(activation, latent_size, base_depth):
   def encoder(images):
     images = 2 * tf.cast(images, dtype=tf.float32) - 1
     net = encoder_net(images)
+    if FLAGS.unit_posterior:
+      scale_diag = tf.ones(latent_size) * FLAGS.posterior_variance
+    else:
+      scale_diag = tf.nn.softplus(net[Ellipsis, latent_size:] +
+                                  _softplus_inverse(1.0))
     return tfd.MultivariateNormalDiag(
-        loc=net[Ellipsis, :latent_size],
-        scale_diag=tf.nn.softplus(net[Ellipsis, latent_size:] +
-                                  _softplus_inverse(1.0)),
-        name="code")
+        loc=net[Ellipsis, :latent_size], scale_diag=scale_diag, name="code")
 
   return encoder
 
@@ -335,36 +369,69 @@ def model_fn(features, labels, mode, params, config):
     raise NotImplementedError(
         "Using `analytic_kl` is only supported when `mixture_components = 1` "
         "since there's no closed form otherwise.")
+  if FLAGS.floating_prior and not (FLAGS.unit_posterior and
+                                   FLAGS.mixture_components == 1):
+    raise NotImplementedError(
+        "Using `floating_prior` is only supported when `unit_posterior` = True "
+        "since there's a scale ambiguity otherwise, and when "
+        "`mixture_components = 1` since there's no closed form otherwise.")
+  if FLAGS.fitted_samples and FLAGS.mixture_components != 1:
+    raise NotImplementedError(
+        "Using `fitted_samples` is only supported when "
+        "`mixture_components = 1` since there's no closed form otherwise.")
+  if FLAGS.bilbo and not FLAGS.floating_prior:
+    raise NotImplementedError(
+        "Using `bilbo` is only supported when `floating_prior = True`.")
 
   activation = tf.nn.leaky_relu
   encoder = make_encoder(activation, FLAGS.latent_size, FLAGS.base_depth)
   decoder = make_decoder(activation, FLAGS.latent_size, [IMAGE_SIZE] * 2 + [3],
                          FLAGS.base_depth)
-  latent_prior = make_mixture_prior(FLAGS.latent_size, FLAGS.mixture_components)
 
   approx_posterior = encoder(features)
   approx_posterior_sample = approx_posterior.sample(FLAGS.n_samples)
   decoder_mu = decoder(approx_posterior_sample)
 
+  if FLAGS.floating_prior or FLAGS.fitted_samples:
+    posterior_batch_mean = tf.reduce_mean(approx_posterior.mean()**2, [0])
+    posterior_batch_variance = tf.reduce_mean(approx_posterior.stddev()**2, [0])
+    posterior_scale = posterior_batch_mean + posterior_batch_variance
+    floating_prior = tfd.MultivariateNormalDiag(
+        tf.zeros(FLAGS.latent_size), tf.sqrt(posterior_scale))
+    tf.summary.scalar("posterior_scale", tf.reduce_sum(posterior_scale))
+
+  if FLAGS.floating_prior:
+    latent_prior = floating_prior
+  else:
+    latent_prior = make_mixture_prior(FLAGS.latent_size,
+                                      FLAGS.mixture_components)
+
   # Decode samples from the prior for visualization.
+  if FLAGS.fitted_samples:
+    sample_distribution = floating_prior
+  else:
+    sample_distribution = latent_prior
+
   n_samples = VIZ_GRID_SIZE**2
-  random_mu = decoder(latent_prior.sample(n_samples))
+  random_mu = decoder(sample_distribution.sample(n_samples))
 
   residual = tf.reshape(features - decoder_mu, [-1] + [IMAGE_SIZE] * 2 + [3])
 
   if FLAGS.use_students_t:
-    nll = adaptive.image_lossfun(
-        residual,
+    lossfun = adaptive.AdaptiveImageLossFunction(
+        residual.shape[1:],
+        residual.dtype,
         color_space=FLAGS.color_space,
         representation=FLAGS.representation,
         wavelet_num_levels=FLAGS.wavelet_num_levels,
         wavelet_scale_base=FLAGS.wavelet_scale_base,
         use_students_t=FLAGS.use_students_t,
         scale_lo=FLAGS.scale_lo,
-        scale_init=FLAGS.scale_init)[0]
+        scale_init=FLAGS.scale_init)
   else:
-    nll = adaptive.image_lossfun(
-        residual,
+    lossfun = adaptive.AdaptiveImageLossFunction(
+        residual.shape[1:],
+        residual.dtype,
         color_space=FLAGS.color_space,
         representation=FLAGS.representation,
         wavelet_num_levels=FLAGS.wavelet_num_levels,
@@ -374,7 +441,9 @@ def model_fn(features, labels, mode, params, config):
         alpha_hi=FLAGS.alpha_hi,
         alpha_init=FLAGS.alpha_init,
         scale_lo=FLAGS.scale_lo,
-        scale_init=FLAGS.scale_init)[0]
+        scale_init=FLAGS.scale_init)
+
+  nll = lossfun(residual)
 
   nll = tf.reshape(nll, [tf.shape(decoder_mu)[0],
                          tf.shape(decoder_mu)[1]] + [IMAGE_SIZE] * 2 + [3])
@@ -419,8 +488,16 @@ def model_fn(features, labels, mode, params, config):
   elbo_local = -(rate + distortion)
 
   elbo = tf.reduce_mean(elbo_local)
-  loss = -elbo
   tf.summary.scalar("elbo", elbo)
+
+  if FLAGS.bilbo:
+    bilbo = -0.5 * tf.reduce_sum(
+        tf.log1p(
+            posterior_batch_mean / posterior_batch_variance)) - avg_distortion
+    tf.summary.scalar("bilbo", bilbo)
+    loss = -bilbo
+  else:
+    loss = -elbo
 
   importance_weighted_elbo = tf.reduce_mean(
       tf.reduce_logsumexp(elbo_local, axis=0) -
@@ -453,7 +530,7 @@ def model_fn(features, labels, mode, params, config):
   # eval set, apparently.
   eval_metric_ops["img_summary_input"] = (img_summary_input, tf.no_op())
   eval_metric_ops["img_summary_recon"] = (img_summary_recon, tf.no_op())
-  eval_metric_ops = {str(k): v for k, v in eval_metric_ops.iteritems()}
+  eval_metric_ops = {str(k): v for k, v in eval_metric_ops.items()}
 
   return tf.estimator.EstimatorSpec(
       mode=mode,
@@ -503,8 +580,7 @@ def main(argv):
     raise ValueError("`output_dir` must be defined")
 
   if FLAGS.delete_existing and tf.gfile.Exists(FLAGS.output_dir):
-    tf.logging.warn("Deleting old log directory at {}".format(
-        FLAGS.output_dir))
+    tf.logging.warn("Deleting old log directory at {}".format(FLAGS.output_dir))
     tf.gfile.DeleteRecursively(FLAGS.output_dir)
   tf.gfile.MakeDirs(FLAGS.output_dir)
 

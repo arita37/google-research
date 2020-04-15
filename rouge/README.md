@@ -40,6 +40,17 @@ suited to some tasks, such as day and month names and numbers. It also has no
 clear license for redistribution. Since we are unable to replicate this
 functionality precisely we do not include stopword removal.
 
+## Two flavors of ROUGE-L
+In the ROUGE paper, two flavors of ROUGE are described:
+
+1. sentence-level: Compute longest common subsequence (LCS) between two pieces of
+text. Newlines are ignored. This is called `rougeL` in this package.
+2. summary-level: Newlines in the text are interpreted as sentence boundaries,
+and the LCS is computed between each pair of reference and candidate sentences,
+and something called union-LCS is computed. This is called `rougeLsum` in this
+package. This is the ROUGE-L reported in *[Get To The Point: Summarization with
+Pointer-Generator Networks](https://arxiv.org/abs/1704.04368)*, for example.
+
 ## How to run
 
 This package compares target files (containing one example per line) with
@@ -52,6 +63,22 @@ python -m rouge.rouge \
     --prediction_filepattern=*.decodes \
     --output_filename=scores.csv \
     --use_stemmer=true
+```
+
+## Using pip
+```
+pip install rouge/requirements.txt
+pip install rouge-score
+```
+
+Then in python:
+
+```python
+from rouge_score import rouge_scorer
+
+scorer = rouge_scorer.RougeScorer(['rouge1', 'rougeL'], use_stemmer=True)
+scores = scorer.score('The quick brown fox jumps over the lazy dog',
+                      'The quick brown dog jumps on the log.')
 ```
 
 ## License

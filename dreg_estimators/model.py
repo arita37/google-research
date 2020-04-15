@@ -1,5 +1,5 @@
 # coding=utf-8
-# Copyright 2019 The Google Research Authors.
+# Copyright 2020 The Google Research Authors.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -21,14 +21,15 @@ from __future__ import print_function
 
 import numpy as np
 import sonnet as snt
-import tensorflow as tf
+import tensorflow.compat.v1 as tf
 import tensorflow_probability as tfp
+from tensorflow.contrib import layers as contrib_layers
 
 tfd = tfp.distributions
 FLAGS = tf.flags.FLAGS
 
 DEFAULT_INITIALIZERS = {
-    "w": tf.contrib.layers.xavier_initializer(),
+    "w": contrib_layers.xavier_initializer(),
     "b": tf.zeros_initializer()
 }
 
@@ -92,6 +93,9 @@ class ConditionalBernoulli(object):
     if kwargs.get("stop_gradient", False):
       p = tf.stop_gradient(p)
     return tfd.Bernoulli(logits=p)
+
+  def get_variables(self):
+    return self.fcnet.get_variables()
 
 
 class ConditionalNormal(object):
@@ -164,6 +168,9 @@ class ConditionalNormal(object):
       mu = tf.stop_gradient(mu)
       sigma = tf.stop_gradient(sigma)
     return tfd.Normal(loc=mu, scale=sigma)
+
+  def get_variables(self):
+    return self.fcnet.get_variables()
 
 
 def iwae(p_z,

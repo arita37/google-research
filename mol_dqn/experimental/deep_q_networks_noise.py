@@ -1,5 +1,5 @@
 # coding=utf-8
-# Copyright 2019 The Google Research Authors.
+# Copyright 2020 The Google Research Authors.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -25,7 +25,8 @@ import functools
 import numpy as np
 from six.moves import range
 from six.moves import zip
-import tensorflow as tf
+import tensorflow.compat.v1 as tf
+from tensorflow.contrib import layers as contrib_layers
 
 
 class DeepQNetwork(object):
@@ -284,7 +285,7 @@ class DeepQNetwork(object):
     """
     with tf.variable_scope(self.scope, reuse=self.reuse):
 
-      self.optimization_op = tf.contrib.layers.optimize_loss(
+      self.optimization_op = contrib_layers.optimize_loss(
           loss=self.weighted_error,
           global_step=tf.train.get_or_create_global_step(),
           learning_rate=self.learning_rate,

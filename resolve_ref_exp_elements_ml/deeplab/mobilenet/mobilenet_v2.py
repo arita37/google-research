@@ -1,5 +1,5 @@
 # coding=utf-8
-# Copyright 2019 The Google Research Authors.
+# Copyright 2020 The Google Research Authors.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -27,12 +27,13 @@ from __future__ import print_function
 
 import copy
 
-import tensorflow as tf
+import tensorflow.compat.v1 as tf
 
 import deeplab.mobilenet.conv_blocks as ops
 import deeplab.mobilenet.mobilenet as lib
+from tensorflow.contrib import slim as contrib_slim
 
-slim = tf.contrib.slim
+slim = contrib_slim
 op = lib.op
 
 expand_input = ops.expand_input_by_factor

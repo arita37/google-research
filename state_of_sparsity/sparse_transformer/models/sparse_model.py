@@ -1,5 +1,5 @@
 # coding=utf-8
-# Copyright 2019 The Google Research Authors.
+# Copyright 2020 The Google Research Authors.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -19,7 +19,9 @@ from __future__ import division
 from __future__ import print_function
 
 from tensor2tensor.utils import t2t_model
-import tensorflow as tf
+import tensorflow.compat.v1 as tf
+from tensorflow.contrib import tpu as contrib_tpu
+from tensorflow.contrib import training as contrib_training
 
 from tensorflow.contrib.model_pruning.python import pruning as magnitude_pruning
 
@@ -36,7 +38,7 @@ def pruning_hparams(hparams, use_tpu, random):  # pylint: disable=unused-argumen
         "Pruning embedding matrix to {}% sparsity"
         .format(hparams.get("embedding_sparsity") * 100))
 
-  hparams = tf.contrib.training.HParams(
+  hparams = contrib_training.HParams(
       name="model_pruning",
       begin_pruning_step=hparams.get("begin_pruning_step"),
       end_pruning_step=hparams.get("end_pruning_step"),
@@ -180,7 +182,7 @@ class SparseModel(t2t_model.T2TModel):
 
       t2t_model.remove_summaries()
 
-      return tf.contrib.tpu.TPUEstimatorSpec(
+      return contrib_tpu.TPUEstimatorSpec(
           tf.estimator.ModeKeys.TRAIN,
           loss=loss,
           train_op=train_op,

@@ -1,5 +1,21 @@
+// Copyright 2020 The Google Research Authors.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
 // Utility to convert a Temple EEG file in EDF format to TFRecord format.
 
+#include <fstream>
+#include <iostream>
 #include <map>
 #include <memory>
 #include <string>
@@ -8,13 +24,13 @@
 
 #include "absl/base/internal/raw_logging.h"
 #include "absl/container/flat_hash_map.h"
+#include "absl/strings/string_view.h"
 #include "edf/edf_oss_file.h"
 #include "edf/parse_edf_lib.h"
 #include "edf/proto/segment.pb.h"
 #include "edf/temple_util.h"
 #include "edf/tf_example_lib.h"
 #include "lullaby/util/arg_parser.h"
-#include "lullaby/util/string_view.h"
 #include "tensorflow/core/example/example.pb.h"
 #include "tensorflow/core/lib/core/status.h"
 #include "tensorflow/core/lib/io/record_reader.h"
@@ -71,9 +87,8 @@ int main(int argc, const char* argv[]) {
     return 0;
   }
 
-  string edf_path = args.GetString("edf_path").to_string();
-  string annotation_path = args.GetString(
-      "edf_annotation_path").to_string();
+  string edf_path = std::string(args.GetString("edf_path"));
+  string annotation_path = std::string(args.GetString("edf_annotation_path"));
 
   auto segment_or = eeg_modelling::ParseEdfToSegmentProto(
       "", edf_path, "");
@@ -92,11 +107,12 @@ int main(int argc, const char* argv[]) {
   auto example_or = GenerateExampleForSegment(segment, annotations);
   example = std::move(example_or).ValueOrDie();
 
-  std::unique_ptr<tensorflow::WritableFile> file;
-  string output_path = args.GetString("output_path").to_string();
-  TF_CHECK_OK(tensorflow::Env::Default()->NewWritableFile(output_path, &file));
-  tensorflow::io::RecordWriter record_writer(file.get());
-  TF_CHECK_OK(record_writer.WriteRecord(example.SerializeAsString()));
-
+  string output_path = std::string(args.GetString("output_path"));
+  std::fstream output(output_path, std::ios::out | std::ios::trunc |
+                      std::ios::binary);
+  if (!example.SerializeToOstream(&output)) {
+    ABSL_RAW_LOG(ERROR, "Failed to write to file: %s", output_path.c_str());
+    return -1;
+  }
   return 0;
 }

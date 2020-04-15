@@ -1,5 +1,5 @@
 # coding=utf-8
-# Copyright 2019 The Google Research Authors.
+# Copyright 2020 The Google Research Authors.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -20,9 +20,10 @@ from __future__ import division
 from __future__ import print_function
 
 import numpy as np
-import tensorflow as tf  # tf
+import tensorflow.compat.v1 as tf  # tf
 
 from simulation_research.tf_risk import dynamics
+from tensorflow.contrib import stateless as contrib_stateless
 
 
 class DynamicsTest(tf.test.TestCase):
@@ -152,7 +153,7 @@ class DynamicsTest(tf.test.TestCase):
     key = 1337
 
     states = tf.ones([num_samples])
-    eps_t = tf.contrib.stateless.stateless_random_normal(
+    eps_t = contrib_stateless.stateless_random_normal(
         shape=[num_samples], seed=[key, int(t / dt)])
 
     next_states = dynamics.gbm_euler_step(
@@ -263,7 +264,7 @@ class DynamicsTest(tf.test.TestCase):
     key = 1337
 
     states_and_max = [tf.ones([num_samples])] * 2
-    eps_t = tf.contrib.stateless.stateless_random_normal(
+    eps_t = contrib_stateless.stateless_random_normal(
         shape=[num_samples], seed=[key, int(t / dt)])
 
     next_states_and_max = dynamics.gbm_euler_step_running_max(
@@ -453,9 +454,9 @@ class DynamicsTest(tf.test.TestCase):
     key = 1337
 
     states_and_max = [tf.ones([num_samples])] * 2
-    eps_t = tf.contrib.stateless.stateless_random_normal(
+    eps_t = contrib_stateless.stateless_random_normal(
         shape=[num_samples], seed=[2 * key, int(t / dt)])
-    u_t = tf.contrib.stateless.stateless_random_uniform(
+    u_t = contrib_stateless.stateless_random_uniform(
         shape=[num_samples], seed=[2 * key + 1, int(t / dt)])
 
     next_states_and_max = dynamics.gbm_euler_step_running_max(
@@ -631,7 +632,7 @@ class DynamicsTest(tf.test.TestCase):
     key = 1337
 
     states_and_sums = [tf.ones([num_samples])] * 2
-    eps_t = tf.contrib.stateless.stateless_random_normal(
+    eps_t = contrib_stateless.stateless_random_normal(
         shape=[num_samples], seed=[key, int(t / dt)])
 
     next_states_and_sums = dynamics.gbm_euler_step_running_sum(
@@ -772,7 +773,7 @@ class DynamicsTest(tf.test.TestCase):
     key = 42
 
     states = tf.ones([num_samples, num_dims])
-    eps_t = tf.contrib.stateless.stateless_random_normal(
+    eps_t = contrib_stateless.stateless_random_normal(
         shape=[num_samples, num_dims], seed=[key, int(t / dt)])
 
     next_states = dynamics.gbm_euler_step_nd(
@@ -887,7 +888,7 @@ class DynamicsTest(tf.test.TestCase):
     key = 13
 
     log_states = tf.zeros([num_samples])
-    eps_t = tf.contrib.stateless.stateless_random_normal(
+    eps_t = contrib_stateless.stateless_random_normal(
         shape=[num_samples], seed=[key, int(t / dt)])
 
     next_log_states = dynamics.gbm_log_euler_step(
@@ -1006,7 +1007,7 @@ class DynamicsTest(tf.test.TestCase):
     key = 128
 
     log_states = tf.zeros([num_samples, num_dims])
-    eps_t = tf.contrib.stateless.stateless_random_normal(
+    eps_t = contrib_stateless.stateless_random_normal(
         shape=[num_samples, num_dims], seed=[key, int(t / dt)])
 
     next_log_states = dynamics.gbm_log_euler_step_nd(
@@ -1078,12 +1079,16 @@ class DynamicsTest(tf.test.TestCase):
     # The step is a bijection w.r.t. dw_t, all terms should be different.
     self.assertAllDistinct(next_log_states_0_eval, next_log_states_1_eval)
 
-  @tf.test.mock.patch('tensorflow.random.stateless_normal')
+  @tf.test.mock.patch.object(tf.random, 'stateless_normal')
   def test_random_normal(self, mock_stateless_random_normal):
     _ = dynamics.random_normal(shape=[3, 1], i=41 / 5, key=9)
     _, call_args = mock_stateless_random_normal.call_args
-    tf.assert_equal(tf.stack([9, 8]), call_args['seed']).mark_used()
-    tf.assert_equal([3, 1], call_args['shape']).mark_used()
+    assert_ops = [
+        tf.assert_equal(tf.stack([9, 8]), call_args['seed']),
+        tf.assert_equal([3, 1], call_args['shape'])
+    ]
+    with self.session() as sess:
+      sess.run(assert_ops)
 
 
 if __name__ == '__main__':

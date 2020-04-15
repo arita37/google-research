@@ -1,5 +1,5 @@
 # coding=utf-8
-# Copyright 2019 The Google Research Authors.
+# Copyright 2020 The Google Research Authors.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -211,18 +211,26 @@ class TfExampleEegDataSource(TfExampleDataSource):
   """Data source that extracts EEG data from a TF Example."""
 
   _CHANNEL_MATCHERS = [
-      ([
-          # EEG channel pattern
-          re.compile(r'eeg_channel/EEG (\w+)(-\w+)*/samples'),
-      ], 'eeg_channel/sampling_frequency_hz'),
-      ([
-          # EEG channel pattern for training data
-          re.compile(r'eeg_channel/EEG (\w+)(-\w+)*/resampled_samples'),
-      ], 'eeg_channel/resampled_sampling_frequency_hz'),
-      ([
-          # 'seizure bin' used at the shorthand for this key.
-          re.compile(r'(seizure_bin)ary_per_sec'),  # Derived feature pattern.
-      ], None),
+      (
+          [
+              # EEG channel pattern
+              re.compile(r'eeg_channel/(?:EEG )?(\w+)(-\w+)*/samples'),
+          ],
+          'eeg_channel/sampling_frequency_hz'),
+      (
+          [
+              # EEG channel pattern for training data
+              re.compile(r'eeg_channel/(?:EEG )?(\w+)(-\w+)*/resampled_samples'
+                        ),
+          ],
+          'eeg_channel/resampled_sampling_frequency_hz'),
+      (
+          [
+              # 'seizure bin' used at the shorthand for this key.
+              re.compile(r'(seizure_bin)ary_per_sec'
+                        ),  # Derived feature pattern.
+          ],
+          None),
   ]
 
   def __init__(self, tf_example, key):

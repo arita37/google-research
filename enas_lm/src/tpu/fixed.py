@@ -1,5 +1,5 @@
 # coding=utf-8
-# Copyright 2019 The Google Research Authors.
+# Copyright 2020 The Google Research Authors.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -25,7 +25,7 @@ import time
 import traceback
 
 import numpy as np
-import tensorflow as tf
+import tensorflow.compat.v1 as tf
 
 gfile = tf.gfile
 from enas_lm.src.tpu import data_utils
@@ -151,7 +151,7 @@ def main(unused_args):
     gfile.DeleteRecursively(output_dir)
     gfile.MakeDirs(output_dir)
 
-  params = tf.contrib.training.HParams(
+  params = contrib_training.HParams(
       data_path=FLAGS.data_path,
       log_every=FLAGS.log_every,
       output_dir=output_dir,
@@ -186,4 +186,3 @@ def main(unused_args):
 
 if __name__ == '__main__':
   tf.app.run()
-

@@ -1,5 +1,5 @@
 # coding=utf-8
-# Copyright 2019 The Google Research Authors.
+# Copyright 2020 The Google Research Authors.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -26,7 +26,7 @@ from sklearn.feature_extraction.text import CountVectorizer
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.utils import shuffle as shuffle_arrays
 
-import tensorflow as tf
+import tensorflow.compat.v1 as tf
 
 FILE_PATH = 'trees/raw_data'
 RANDOM_STATE = 109971161161043253 % 8085

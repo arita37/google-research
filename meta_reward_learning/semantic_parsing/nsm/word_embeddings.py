@@ -1,5 +1,5 @@
 # coding=utf-8
-# Copyright 2019 The Google Research Authors.
+# Copyright 2020 The Google Research Authors.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -16,7 +16,7 @@
 import json
 import numpy as np
 # import gensim
-from tensorflow import gfile
+from tensorflow.compat.v1 import gfile
 
 
 class EmbeddingModel(object):

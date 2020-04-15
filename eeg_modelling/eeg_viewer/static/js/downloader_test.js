@@ -1,4 +1,4 @@
-// Copyright 2019 The Google Research Authors.
+// Copyright 2020 The Google Research Authors.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -82,12 +82,13 @@ testSuite({
     });
 
     const filenameMatcher = new mockmatchers.ArgumentMatcher((filename) => {
-      return goog.isString(filename) && filename.includes(downloadData.name) &&
+      return typeof filename === 'string' &&
+          filename.includes(downloadData.name) &&
           filename.includes(storeData.sstableKey) && filename.endsWith('.json');
     });
 
     const jsonTypeMatcher = new mockmatchers.ArgumentMatcher((contentType) => {
-      return goog.isString(contentType) && contentType.includes('json');
+      return typeof contentType === 'string' && contentType.includes('json');
     });
 
     const downloadMock =

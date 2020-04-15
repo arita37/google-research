@@ -1,5 +1,5 @@
 # coding=utf-8
-# Copyright 2019 The Google Research Authors.
+# Copyright 2020 The Google Research Authors.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -26,8 +26,8 @@ from absl import app
 from absl import flags
 import h5py
 from replay_buffer import ReplayBuffer
-import tensorflow as tf
-from tensorflow.contrib.eager.python import tfe
+import tensorflow.compat.v1 as tf
+from tensorflow.contrib.eager.python import tfe as contrib_eager_python_tfe
 
 FLAGS = flags.FLAGS
 
@@ -74,8 +74,9 @@ def main(_):
             [trajectories['r_B_T'][i][j]],
             [mask], j == trajectories['len_B'][i] - 1)
 
-    replay_buffer_var = tfe.Variable('', name='expert_replay_buffer')
-    saver = tfe.Saver([replay_buffer_var])
+    replay_buffer_var = contrib_eager_python_tfe.Variable(
+        '', name='expert_replay_buffer')
+    saver = contrib_eager_python_tfe.Saver([replay_buffer_var])
     odir = os.path.join(FLAGS.dst_data_dir, env)
     print('Saving results to checkpoint in directory: %s' % odir)
     tf.gfile.MakeDirs(odir)

@@ -1,5 +1,5 @@
 # coding=utf-8
-# Copyright 2019 The Google Research Authors.
+# Copyright 2020 The Google Research Authors.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -22,7 +22,8 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
 
-import tensorflow as tf
+import tensorflow.compat.v1 as tf
+from tensorflow.contrib import layers as contrib_layers
 
 
 def _nin_block(
@@ -144,7 +145,7 @@ class Nin(object):
 
       reg = None
       if self.decay_fac > 0.:
-        reg = tf.contrib.layers.l2_regularizer(scale=self.decay_fac)
+        reg = contrib_layers.l2_regularizer(scale=self.decay_fac)
 
       all_preactivations = []
       activation = inputs

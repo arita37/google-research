@@ -1,5 +1,5 @@
 # coding=utf-8
-# Copyright 2019 The Google Research Authors.
+# Copyright 2020 The Google Research Authors.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -46,7 +46,7 @@ class CLS(object):
     """Initializes a CLS object.
 
     Args:
-      graph: networkx graph for the house.
+      graph: networkx graph for the environment.
       weight: networkx edge weight key (str).
       threshold: distance threshold $d_{th}$ (float).
     """

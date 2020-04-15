@@ -1,4 +1,4 @@
-# Copyright 2019 The Google Research Authors.
+# Copyright 2020 The Google Research Authors.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -20,11 +20,11 @@ virtualenv -p python3 .
 source ./bin/activate
 
 pip install -e solver1d
-python -m solver1d.scripts.solve_poschl_teller_potential \
+python3 -m solver1d.scripts.solve_poschl_teller_potential \
 --solver=EigenSolver \
 --lam=0.5 \
 --scaling=1 \
 --grid_lower=-20 \
 --grid_upper=20 \
---num_grids=1001 \
+--num_grids=101 \
 --num_electrons=1

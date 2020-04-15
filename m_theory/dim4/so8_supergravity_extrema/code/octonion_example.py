@@ -1,5 +1,5 @@
 # coding=utf-8
-# Copyright 2019 The Google Research Authors.
+# Copyright 2020 The Google Research Authors.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -24,7 +24,8 @@ from __future__ import division
 from __future__ import print_function
 
 import numpy
-import tensorflow as tf
+import tensorflow.compat.v1 as tf
+from tensorflow.contrib import opt as contrib_opt
 
 
 def get_gamma_vsc():
@@ -52,8 +53,8 @@ def get_octonion_mult_table():
   ret = numpy.zeros([8, 8, 8])
   fano_lines = "124 156 137 235 267 346 457"
   for n in range(1, 8):
-      ret[0, n, n] = -1
-      ret[n, n, 0] = ret[n, 0, n] = 1
+    ret[0, n, n] = -1
+    ret[n, n, 0] = ret[n, 0, n] = 1
   ret[0, 0, 0] = 1
   for cijk in fano_lines.split():
     ijk = map(int, cijk)
@@ -92,8 +93,7 @@ def find_transforms():
     # spinor and cospinor transformation matrices from orthogonality.
     loss = (tf.nn.l2_loss(delta_mult) +
             tf.nn.l2_loss(delta_ortho_s) + tf.nn.l2_loss(delta_ortho_c))
-    opt = tf.contrib.opt.ScipyOptimizerInterface(
-        loss, options=dict(maxiter=1000))
+    opt = contrib_opt.ScipyOptimizerInterface(loss, options=dict(maxiter=1000))
     with tf.Session() as sess:
       sess.run(tf.global_variables_initializer())
       opt.minimize(session=sess)

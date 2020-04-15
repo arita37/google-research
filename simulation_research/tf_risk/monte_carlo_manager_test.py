@@ -1,5 +1,5 @@
 # coding=utf-8
-# Copyright 2019 The Google Research Authors.
+# Copyright 2020 The Google Research Authors.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -22,12 +22,13 @@ from __future__ import print_function
 from absl.testing import parameterized
 
 import numpy as np
-import tensorflow as tf  # tf
+import tensorflow.compat.v1 as tf  # tf
 
 from simulation_research.tf_risk import dynamics
 from simulation_research.tf_risk import monte_carlo_manager
 from simulation_research.tf_risk import payoffs
 from simulation_research.tf_risk import util
+from tensorflow.contrib import stateless as contrib_stateless
 
 
 def _prng_key(i, key):
@@ -35,7 +36,7 @@ def _prng_key(i, key):
 
 
 def _random_normal(shape, i, key=0):
-  return tf.contrib.stateless.stateless_random_normal(
+  return contrib_stateless.stateless_random_normal(
       shape=shape, seed=_prng_key(i, key))
 
 

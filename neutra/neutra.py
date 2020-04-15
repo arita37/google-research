@@ -1,5 +1,5 @@
 # coding=utf-8
-# Copyright 2019 The Google Research Authors.
+# Copyright 2020 The Google Research Authors.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -30,7 +30,7 @@ import scipy.optimize as sp_opt
 import simplejson
 from six.moves import range
 from six.moves import zip
-import tensorflow as tf
+import tensorflow.compat.v1 as tf
 import tensorflow_probability as tfp
 from typing import Tuple
 
@@ -46,10 +46,10 @@ def MakeAffineBijectorFn(num_dims, train=False, use_tril=False):
   mu = tf.get_variable("mean", initializer=tf.zeros([num_dims]))
   if use_tril:
     tril_flat = tf.get_variable("tril_flat", [num_dims * (num_dims + 1) // 2])
-    tril_raw = tfd.fill_triangular(tril_flat)
+    tril_raw = tfp.math.fill_triangular(tril_flat)
     sigma = tf.nn.softplus(tf.matrix_diag_part(tril_raw))
-    tril = (1.0 - tf.matrix_diag(tf.ones_like(sigma))) * tril_raw
-    return tfb.Affine(shift=mu, scale_diag=sigma, scale_tril=tril)
+    tril = tf.linalg.set_diag(tril_raw, sigma)
+    return tfb.Affine(shift=mu, scale_tril=tril)
   else:
     sigma = tf.nn.softplus(
         tf.get_variable("invpsigma", initializer=tf.zeros([num_dims])))
@@ -91,7 +91,7 @@ def MakeRNVPBijectorFn(num_dims,
   if learn_scale:
     scale = tf.nn.softplus(
         tf.get_variable(
-            "isp_global_scale", initializer=tfd.softplus_inverse(scale)))
+            "isp_global_scale", initializer=tfp.math.softplus_inverse(scale)))
   bijectors.append(tfb.Affine(scale_identity_multiplier=scale))
 
   bijector = tfb.Chain(bijectors)
@@ -139,7 +139,7 @@ def MakeIAFBijectorFn(
   if learn_scale:
     scale = tf.nn.softplus(
         tf.get_variable(
-            "isp_global_scale", initializer=tfd.softplus_inverse(scale)))
+            "isp_global_scale", initializer=tfp.math.softplus_inverse(scale)))
   bijectors.append(tfb.Affine(scale_identity_multiplier=scale))
 
   bijector = tfb.Chain(bijectors)
@@ -949,8 +949,8 @@ class NeuTraExperiment(object):
     opt = tf.train.AdamOptimizer(learning_rate=learning_rate)
     self.train_op = opt.minimize(self.loss, global_step=self.global_step)
 
-    tf.contrib.summary.scalar("kl_q_p", self.kl_q_p)
-    tf.contrib.summary.scalar("loss", self.loss)
+    tf.summary.scalar("kl_q_p", self.kl_q_p)
+    tf.summary.scalar("loss", self.loss)
 
     self.init = [
         tf.global_variables_initializer(),
@@ -980,7 +980,7 @@ class NeuTraExperiment(object):
       fetch, _ = sess.run([{
           "global_step": self.global_step
       },
-                           tf.contrib.summary.all_summary_ops()])
+                           tf.compat.v1.summary.all_v2_summary_ops()])
       q_errs.append(sess.run(self.q_stats))
       if plot_callback:
         plot_callback()
@@ -995,11 +995,10 @@ class NeuTraExperiment(object):
 
     summarize()
 
-    flat_q_errs = [tf.contrib.framework.nest.flatten(s) for s in q_errs]
+    flat_q_errs = [tf.nest.flatten(s) for s in q_errs]
     trans_q_errs = list(zip(*flat_q_errs))
     concat_q_errs = [np.stack(q, 0) for q in trans_q_errs]
-    q_stats = tf.contrib.framework.nest.pack_sequence_as(
-        q_errs[0], concat_q_errs)
+    q_stats = tf.nest.pack_sequence_as(q_errs[0], concat_q_errs)
 
     self.saver.save(
         sess,

@@ -1,5 +1,5 @@
 # coding=utf-8
-# Copyright 2019 The Google Research Authors.
+# Copyright 2020 The Google Research Authors.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -22,7 +22,7 @@ import json
 from absl.testing import absltest
 import mock
 from six.moves import range
-import tensorflow as tf
+import tensorflow.compat.v1 as tf
 
 from eeg_modelling.eeg_viewer import data_source
 from eeg_modelling.eeg_viewer import utils

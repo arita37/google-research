@@ -1,5 +1,5 @@
 # coding=utf-8
-# Copyright 2019 The Google Research Authors.
+# Copyright 2020 The Google Research Authors.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -123,7 +123,8 @@ FLAGS = flags.FLAGS
 
 
 def CreatePersonaGraph(graph,
-                       clustering_fn=label_prop.label_propagation_communities):
+                       clustering_fn=label_prop.label_propagation_communities,
+                       persona_start_id=0):
   """The function creates the persona graph.
 
   Args:
@@ -134,6 +135,7 @@ def CreatePersonaGraph(graph,
       containing each partition as element. Each partition is in turn
       represented as a list of node ids. The default function is the networkx
       label_propagation_communities clustering algorithm.
+    persona_start_id: The starting id (int) to use for the persona id
 
   Returns:
     A pair of (graph, mapping) where "graph" is an nx.Graph instance of the
@@ -147,8 +149,9 @@ def CreatePersonaGraph(graph,
   persona_graph = nx.Graph()
   persona_to_original_mapping = dict()
 
-  persona_id_counter = itertools.count(
-  )  # Next id to allacate in persona graph.
+  # Next id to allacate in persona graph.
+  persona_id_counter = itertools.count(start=persona_start_id)
+
   for u, egonet in egonets.items():
     partitioning = clustering_fn(egonet)  # Clustering the egonet.
     seen_neighbors = set()  # Process each of the egonet's local clusters.

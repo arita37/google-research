@@ -1,5 +1,5 @@
 # coding=utf-8
-# Copyright 2019 The Google Research Authors.
+# Copyright 2020 The Google Research Authors.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -35,7 +35,7 @@ from six.moves import urllib
 from tensor2tensor.layers import common_image_attention as cia
 from tensor2tensor.layers import common_layers
 from tensor2tensor.models import transformer
-import tensorflow as tf
+import tensorflow.compat.v1 as tf
 
 from tensorflow_probability import bijectors as tfb
 from tensorflow_probability import distributions as tfd
@@ -556,7 +556,7 @@ def iaf_scale_from_matmul(shifted_codes, name=None):
                                    dtype=tf.float32,
                                    initializer=tf.zeros_initializer())
     scale_bijector = tfb.Affine(
-        scale_tril=tfd.fill_triangular(scale_matrix))
+        scale_tril=tfp.math.fill_triangular(scale_matrix))
     unconstrained_scale = scale_bijector.forward(
         tf.transpose(shifted_codes, [0, 1, 3, 2]))
     # Transpose the bijector output since it performs a batch matmul.

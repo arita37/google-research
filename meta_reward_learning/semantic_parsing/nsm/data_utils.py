@@ -1,5 +1,5 @@
 # coding=utf-8
-# Copyright 2019 The Google Research Authors.
+# Copyright 2020 The Google Research Authors.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -20,7 +20,7 @@ import collections
 import random
 import numpy as np
 import six
-from tensorflow import gfile
+from tensorflow.compat.v1 import gfile
 from meta_reward_learning.semantic_parsing.nsm import nlp_utils
 
 DECODE_TK = '<DECODE>'

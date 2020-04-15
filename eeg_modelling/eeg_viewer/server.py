@@ -1,5 +1,5 @@
 # coding=utf-8
-# Copyright 2019 The Google Research Authors.
+# Copyright 2020 The Google Research Authors.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -21,7 +21,6 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
 
-import sys
 import traceback
 
 from absl import app as absl_app
@@ -31,8 +30,9 @@ from absl import logging
 import flask
 from flask import wrappers as flask_wrappers
 from gevent.pywsgi import WSGIServer
-import tensorflow as tf
+import tensorflow.compat.v1 as tf
 from werkzeug.contrib import wrappers as werkzeug_wrappers
+from google.protobuf.message import DecodeError
 
 from eeg_modelling.eeg_viewer import data_source
 from eeg_modelling.eeg_viewer import prediction_data_service
@@ -182,7 +182,7 @@ def MakeErrorHandler(get_message):
     ErrorHandler function
   """
   def ErrorHandler(e):
-    tb = traceback.format_exc(sys.exc_info()[2])
+    tb = traceback.format_exc()
     detail = str(e)
     response = flask.jsonify(message=get_message(detail),
                              detail=detail,
@@ -212,6 +212,11 @@ def IOErrorMessage(unused_detail):
   return 'Path not found'
 
 
+@MakeErrorHandler
+def DecodeErrorMessage(unused_detail):
+  return 'Couldn\'t read protobuf file'
+
+
 def RegisterErrorHandlers(app):
   """Registers the error handlers in the flask app.
 
@@ -222,6 +227,7 @@ def RegisterErrorHandlers(app):
   app.register_error_handler(KeyError, KeyErrorMessage)
   app.register_error_handler(NotImplementedError, NotImplementedErrorMessage)
   app.register_error_handler(IOError, IOErrorMessage)
+  app.register_error_handler(DecodeError, DecodeErrorMessage)
 
 
 def IndexPage():

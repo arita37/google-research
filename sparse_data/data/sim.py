@@ -1,5 +1,5 @@
 # coding=utf-8
-# Copyright 2019 The Google Research Authors.
+# Copyright 2020 The Google Research Authors.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -21,7 +21,8 @@ for smooth linear and multiplicative functions.
 """
 
 import numpy as np
-import tensorflow as tf  # tf
+import tensorflow.compat.v1 as tf  # tf
+from tensorflow.contrib import layers as contrib_layers
 
 SEED = 49 + 32 + 67 + 111 + 114 + 32 + 49 + 51 + 58 + 52 + 45 + 56
 DEFAULT_NUM_SAMPLE = 5000
@@ -131,7 +132,7 @@ class LinearSimulation(Simulation):
         'idx_{}.coef_{:.3f}'.format(i, self._coefficients[i])
         for i in range(self._num_feature)
     ]
-    return [tf.contrib.layers.real_valued_column(fc) for fc in feature_columns]
+    return [contrib_layers.real_valued_column(fc) for fc in feature_columns]
 
   def oracle_predict(self, x):
     """Predicts targets of given data with the perfect oracle.
@@ -201,7 +202,7 @@ class SparsitySimulation(LinearSimulation):
         problem=problem)
 
     self._num_feature = num_feature / 2 * 2
-    self._num_inf_feature = self._num_feature / 2
+    self._num_inf_feature = int(self._num_feature / 2)
     self._coef_factor = coef_factor
     self._which_features = which_features
     self._alternate = alternate
@@ -252,7 +253,7 @@ class SparsitySimulation(LinearSimulation):
         'uninf.idx_{}.coef_{:.3f}'.format(i, self._coefficients[i])
         for i in range(self._num_inf_feature, self._num_feature)
     ]
-    return [tf.contrib.layers.real_valued_column(fc) for fc in inf + uninf]
+    return [contrib_layers.real_valued_column(fc) for fc in inf + uninf]
 
 
 class CardinalitySimulation(SparsitySimulation):
@@ -297,11 +298,11 @@ class CardinalitySimulation(SparsitySimulation):
   def _generate_x(self):
     if self._alternate:  # alternate experiment when cardinality is same
       x_high_card = self._rng.randint(
-          2, size=(self._num_sample, self._num_feature / 2))
+          2, size=(self._num_sample, int(self._num_feature / 2)))
     else:
-      x_high_card = self._rng.rand(self._num_sample, self._num_feature / 2)
+      x_high_card = self._rng.rand(self._num_sample, int(self._num_feature / 2))
     x_low_card = self._rng.randint(
-        2, size=(self._num_sample, self._num_feature / 2))
+        2, size=(self._num_sample, int(self._num_feature / 2)))
 
     if self._which_features == 'all':
       return np.hstack([x_low_card, x_high_card])
@@ -346,7 +347,7 @@ class MultiplicativeSimulation(Simulation):
 
     # Rounds number of features and groups per order to closest valid values.
     sum_orders = sum(orders)
-    self._num_group_per_order = num_feature / sum_orders
+    self._num_group_per_order = int(num_feature / sum_orders)
     self._num_feature = self._num_group_per_order * sum_orders
     if num_feature != self._num_feature:
       tf.logging.warn('Number of features is rounded from %d to %d',
@@ -413,7 +414,7 @@ class MultiplicativeSimulation(Simulation):
               self._group_coefficients_by_order[order][group_idx]))
           count += 1
         group += 1
-    return [tf.contrib.layers.real_valued_column(fc) for fc in out]
+    return [contrib_layers.real_valued_column(fc) for fc in out]
 
   def oracle_predict(self, x):
     """Predicts targets of given data with the perfect oracle.
@@ -479,7 +480,7 @@ class XORSimulation(Simulation):
     self._problem = problem
 
     # Rounds number of features and pairs to closest valid values.
-    self._num_pair = num_feature / 2
+    self._num_pair = int(num_feature / 2)
     self._num_feature = self._num_pair * 2
     if num_feature != self._num_feature:
       tf.logging.warn('Number of features is rounded from %d to %d',
@@ -538,7 +539,7 @@ class XORSimulation(Simulation):
         'xorpair_{}.idx_{}'.format(i - self._num_pair, i)
         for i in range(self._num_pair, num_feature)
     ]
-    return [tf.contrib.layers.real_valued_column(fc) for fc in x1_col + x2_col]
+    return [contrib_layers.real_valued_column(fc) for fc in x1_col + x2_col]
 
   def oracle_predict(self, x):
     """Predicts targets of given data with the perfect oracle.

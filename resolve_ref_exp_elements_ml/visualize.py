@@ -1,5 +1,5 @@
 # coding=utf-8
-# Copyright 2019 The Google Research Authors.
+# Copyright 2020 The Google Research Authors.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -26,9 +26,10 @@ from deeplab import save_annotation
 import model
 import model_input
 import numpy as np
-import tensorflow as tf
+import tensorflow.compat.v1 as tf
 import tensorflow.contrib.slim as slim
-from tensorflow.python.platform import app
+from tensorflow.compat.v1.python.platform import app
+from tensorflow.contrib import slim as contrib_slim
 
 flags = tf.app.flags
 FLAGS = flags.FLAGS
@@ -206,7 +207,7 @@ def main(unused_argv):
       predictions *= weights
 
       tf.train.get_or_create_global_step()
-      saver = tf.train.Saver(slim.get_variables_to_restore())
+      saver = tf.train.Saver(contrib_slim.get_variables_to_restore())
       sv = tf.train.Supervisor(
           graph=g,
           logdir=FLAGS.vis_logdir,
@@ -220,7 +221,7 @@ def main(unused_argv):
 
       # Infinite loop to visualize the results when new checkpoint is created.
       while True:
-        last_checkpoint = slim.evaluation.wait_for_new_checkpoint(
+        last_checkpoint = contrib_slim.evaluation.wait_for_new_checkpoint(
             FLAGS.checkpoint_dir, last_checkpoint)
         start = time.time()
         print('Starting visualization at ' +

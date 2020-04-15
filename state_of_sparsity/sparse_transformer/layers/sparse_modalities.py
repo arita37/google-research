@@ -1,5 +1,5 @@
 # coding=utf-8
-# Copyright 2019 The Google Research Authors.
+# Copyright 2020 The Google Research Authors.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -22,10 +22,11 @@ from six.moves import range  # pylint: disable=redefined-builtin
 
 from tensor2tensor.layers import common_layers
 
-import tensorflow as tf
+import tensorflow.compat.v1 as tf
 import state_of_sparsity.layers.l0_regularization as l0
 import state_of_sparsity.layers.variational_dropout as vd
 from state_of_sparsity.sparse_transformer.layers import common_sparse
+from tensorflow.contrib.eager.python import tfe as contrib_eager
 from tensorflow.contrib.model_pruning.python import pruning
 
 
@@ -91,7 +92,7 @@ def _get_weights(model_hparams, vocab_size, hidden_dim=None):
 
   if not aux_params_shards:
     # Convert ret to tensor.
-    if not tf.contrib.eager.in_eager_mode():
+    if not contrib_eager.in_eager_mode():
       ret = common_layers.convert_gradient_to_tensor(ret)
     return ret
 
@@ -114,7 +115,7 @@ def _get_weights(model_hparams, vocab_size, hidden_dim=None):
     COLLECTED_VARIABLES = True
 
   # Convert aux ret to tensor.
-  if not tf.contrib.eager.in_eager_mode():
+  if not contrib_eager.in_eager_mode():
     ret = common_layers.convert_gradient_to_tensor(ret)
     aux_ret = common_layers.convert_gradient_to_tensor(aux_ret)
   return (ret, aux_ret)
